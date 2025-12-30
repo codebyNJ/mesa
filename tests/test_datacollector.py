@@ -407,7 +407,7 @@ class TestDataCollectorErrorHandling(unittest.TestCase):
 
     def test_agent_missing_attribute_error(self):
         """Test that DataCollector raises AttributeError for missing agent attributes.
-        
+
         This tests the fix for GitHub issue: DataCollector silently skips reporters
         for non-existent attributes. Now it should raise an informative error.
         """
@@ -420,9 +420,9 @@ class TestDataCollectorErrorHandling(unittest.TestCase):
         # Create DataCollector with reporter for missing attribute
         dc = DataCollector(
             agent_reporters={
-                "wealth": "wealth",    # Exists
-                "health": "health",    # Does NOT exist
-                "status": "status"     # Exists
+                "wealth": "wealth",  # Exists
+                "health": "health",  # Does NOT exist
+                "status": "status",  # Exists
             }
         )
 
@@ -443,12 +443,7 @@ class TestDataCollectorErrorHandling(unittest.TestCase):
         agent.status = "active"
 
         # Create DataCollector with only valid reporters
-        dc = DataCollector(
-            agent_reporters={
-                "wealth": "wealth",
-                "status": "status"
-            }
-        )
+        dc = DataCollector(agent_reporters={"wealth": "wealth", "status": "status"})
 
         # Should work without errors
         dc.collect(model)
@@ -457,7 +452,7 @@ class TestDataCollectorErrorHandling(unittest.TestCase):
         self.assertIn(0, dc._agent_records)
         records = dc._agent_records[0]
         self.assertEqual(len(records), 1)
-        
+
         _step, _agent_id, wealth, status = records[0]
         self.assertEqual(wealth, 100)
         self.assertEqual(status, "active")
@@ -472,7 +467,7 @@ class TestDataCollectorErrorHandling(unittest.TestCase):
         dc = DataCollector(
             agent_reporters={
                 "wealth": lambda a: a.wealth,
-                "doubled": lambda a: a.wealth * 2
+                "doubled": lambda a: a.wealth * 2,
             }
         )
 
