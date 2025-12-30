@@ -6,7 +6,6 @@ backends, supporting various space types and visualization components.
 
 from __future__ import annotations
 
-import contextlib
 import warnings
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Literal
