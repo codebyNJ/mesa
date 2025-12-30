@@ -230,7 +230,9 @@ def test_network_non_contiguous_nodes():
         }
 
         # Create arguments with agent positions at non-contiguous nodes
-        args = {"loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)}
+        args = {
+            "loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)
+        }
 
         # Map coordinates
         with warnings.catch_warnings(record=True) as w:
@@ -242,13 +244,15 @@ def test_network_non_contiguous_nodes():
 
             # All agents should be mapped correctly
             assert mapped["loc"].shape == (5, 2)
-            expected_positions = np.array([
-                [0.1, 0.2],  # Node 0
-                [0.3, 0.4],  # Node 1
-                [0.5, 0.6],  # Node 5
-                [0.7, 0.8],  # Node 10
-                [0.9, 1.0],  # Node 15
-            ])
+            expected_positions = np.array(
+                [
+                    [0.1, 0.2],  # Node 0
+                    [0.3, 0.4],  # Node 1
+                    [0.5, 0.6],  # Node 5
+                    [0.7, 0.8],  # Node 10
+                    [0.9, 1.0],  # Node 15
+                ]
+            )
             np.testing.assert_array_equal(mapped["loc"], expected_positions)
 
 
@@ -272,7 +276,9 @@ def test_network_missing_nodes_warning():
         }
 
         # Create arguments with agent positions including missing nodes
-        args = {"loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)}
+        args = {
+            "loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)
+        }
 
         # Map coordinates and capture warnings
         with warnings.catch_warnings(record=True) as w:
@@ -286,13 +292,15 @@ def test_network_missing_nodes_warning():
 
             # Should still map all agents (missing ones at origin)
             assert mapped["loc"].shape == (5, 2)
-            expected_positions = np.array([
-                [0.1, 0.2],  # Node 0
-                [0.3, 0.4],  # Node 1
-                [0.5, 0.6],  # Node 5
-                [0.0, 0.0],  # Node 10 (missing, default to origin)
-                [0.0, 0.0],  # Node 15 (missing, default to origin)
-            ])
+            expected_positions = np.array(
+                [
+                    [0.1, 0.2],  # Node 0
+                    [0.3, 0.4],  # Node 1
+                    [0.5, 0.6],  # Node 5
+                    [0.0, 0.0],  # Node 10 (missing, default to origin)
+                    [0.0, 0.0],  # Node 15 (missing, default to origin)
+                ]
+            )
             np.testing.assert_array_equal(mapped["loc"], expected_positions)
 
 
@@ -357,7 +365,9 @@ def test_network_large_node_ids():
             10000: np.array([3.0, 3.0]),
         }
 
-        args = {"loc": np.array([[1000, 1000], [5000, 5000], [10000, 10000]], dtype=float)}
+        args = {
+            "loc": np.array([[1000, 1000], [5000, 5000], [10000, 10000]], dtype=float)
+        }
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -389,7 +399,9 @@ def test_network_regression_indexerror_bug():
         }
 
         # This would have caused IndexError in the old code
-        args = {"loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)}
+        args = {
+            "loc": np.array([[0, 0], [1, 1], [5, 5], [10, 10], [15, 15]], dtype=float)
+        }
 
         # Before fix: this would return None or raise suppressed IndexError
         # After fix: this should return proper mapping
@@ -401,11 +413,13 @@ def test_network_regression_indexerror_bug():
         assert not np.any(np.isnan(mapped["loc"]))  # No NaN values
 
         # Verify specific positions
-        expected = np.array([
-            [0.1, 0.2],  # Node 0
-            [0.3, 0.4],  # Node 1
-            [0.5, 0.6],  # Node 5
-            [0.7, 0.8],  # Node 10
-            [0.9, 1.0],  # Node 15
-        ])
+        expected = np.array(
+            [
+                [0.1, 0.2],  # Node 0
+                [0.3, 0.4],  # Node 1
+                [0.5, 0.6],  # Node 5
+                [0.7, 0.8],  # Node 10
+                [0.9, 1.0],  # Node 15
+            ]
+        )
         np.testing.assert_array_equal(mapped["loc"], expected)
