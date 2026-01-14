@@ -129,7 +129,9 @@ class SignalingList(MutableSequence[Any]):
         """
         old_value = self.data[index]
         self.data[index] = value
-        self.owner.notify(self.name, old_value, value, ListSignalType.REPLACE, index=index)
+        self.owner.notify(
+            self.name, old_value, value, ListSignalType.REPLACE, index=index
+        )
 
     def __delitem__(self, index: int) -> None:
         """Delete item at index.
@@ -140,7 +142,9 @@ class SignalingList(MutableSequence[Any]):
         """
         old_value = self.data
         del self.data[index]
-        self.owner.notify(self.name, old_value, None, ListSignalType.REMOVE, index=index)
+        self.owner.notify(
+            self.name, old_value, None, ListSignalType.REMOVE, index=index
+        )
 
     def __getitem__(self, index) -> Any:
         """Get item at index.
