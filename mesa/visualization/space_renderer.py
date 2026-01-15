@@ -152,24 +152,13 @@ class SpaceRenderer:
             mapped_arguments["loc"] = loc
 
         elif isinstance(self.space, Network):
-            # Map coordinates for Network spaces
-            # Hybrid approach combining:
-            # 1. Dictionary lookup for non-contiguous node IDs (PR #3045)
-            # 2. NaN masking for race condition resilience (PR #3065)
-            # 3. Vectorization using np.unique for performance
+            # Map network node IDs to positions using vectorized dictionary lookup
             loc = arguments["loc"].astype(float)
             pos_dict = self.space_drawer.pos
-
-            # Extract node IDs from location data
             node_ids = loc[:, 0].astype(int)
 
-            # Initialize with NaN (missing nodes will be hidden, not plotted)
-            mapped_locs = np.full((len(node_ids), 2), np.nan)
-
-            # Vectorized approach: process each unique node_id once
+            # Process unique node IDs once, then broadcast to all agents
             unique_ids, inverse_indices = np.unique(node_ids, return_inverse=True)
-
-            # Build positions for unique IDs (dictionary lookup once per unique ID)
             unique_positions = np.full((len(unique_ids), 2), np.nan)
             missing_nodes = []
 
@@ -179,10 +168,9 @@ class SpaceRenderer:
                 else:
                     missing_nodes.append(node_id)
 
-            # Vectorized broadcast: map back to all agents
             mapped_locs = unique_positions[inverse_indices]
 
-            # Warn only if >10% missing (design issue vs transient race)
+            # Warn if significant nodes missing (likely layout issue, not race condition)
             if missing_nodes and len(missing_nodes) > len(pos_dict) / 10:
                 sample = missing_nodes[: min(5, len(missing_nodes))]
                 warnings.warn(
