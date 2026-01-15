@@ -156,6 +156,7 @@ class SpaceRenderer:
             # Hybrid approach combining:
             # 1. Dictionary lookup for non-contiguous node IDs (PR #3045)
             # 2. NaN masking for race condition resilience (PR #3065)
+            # 3. Vectorization using np.unique for performance
             loc = arguments["loc"].astype(float)
             pos_dict = self.space_drawer.pos
 
@@ -165,14 +166,21 @@ class SpaceRenderer:
             # Initialize with NaN (missing nodes will be hidden, not plotted)
             mapped_locs = np.full((len(node_ids), 2), np.nan)
 
+            # Vectorized approach: process each unique node_id once
+            unique_ids, inverse_indices = np.unique(node_ids, return_inverse=True)
+
+            # Build positions for unique IDs (dictionary lookup once per unique ID)
+            unique_positions = np.full((len(unique_ids), 2), np.nan)
             missing_nodes = []
 
-            # Dictionary lookup: works for any node ID value
-            for i, node_id in enumerate(node_ids):
+            for idx, node_id in enumerate(unique_ids):
                 if node_id in pos_dict:
-                    mapped_locs[i] = pos_dict[node_id]
+                    unique_positions[idx] = pos_dict[node_id]
                 else:
                     missing_nodes.append(node_id)
+
+            # Vectorized broadcast: map back to all agents
+            mapped_locs = unique_positions[inverse_indices]
 
             # Warn only if >10% missing (design issue vs transient race)
             if missing_nodes and len(missing_nodes) > len(pos_dict) / 10:
