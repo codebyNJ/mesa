@@ -531,7 +531,9 @@ def test_list_support():
     assert handler in [ref() for ref in agent.subscribers["attr1"]["change"]]
     assert handler in [ref() for ref in agent.subscribers["attr2"]["change"]]
     # attr3 was not observed, so it may not exist in subscribers (lazy initialization)
-    assert "attr3" not in agent.subscribers or handler not in [ref() for ref in agent.subscribers["attr3"].get("change", [])]
+    assert "attr3" not in agent.subscribers or handler not in [
+        ref() for ref in agent.subscribers["attr3"].get("change", [])
+    ]
 
     # Test unobserve with list of names
     agent.unobserve(["attr1", "attr2"], "change", handler)
@@ -557,7 +559,9 @@ def test_list_support():
 
     assert handler2 in [ref() for ref in agent2.subscribers["custom_attr"]["type1"]]
     # type2 was never observed, so may not exist (lazy initialization)
-    assert "type2" not in agent2.subscribers.get("custom_attr", {}) or handler2 not in [ref() for ref in agent2.subscribers["custom_attr"]["type2"]]
+    assert "type2" not in agent2.subscribers.get("custom_attr", {}) or handler2 not in [
+        ref() for ref in agent2.subscribers["custom_attr"]["type2"]
+    ]
     assert handler2 in [ref() for ref in agent2.subscribers["custom_attr"]["type3"]]
 
     # Test unobserve with list of signal types
@@ -580,4 +584,3 @@ def test_list_support():
     assert is_empty("attr1")
     assert not is_empty("attr2")
     assert is_empty("attr3")
-
