@@ -1,5 +1,6 @@
 """Tests for mesa_signals."""
 
+import copy
 from unittest.mock import Mock, patch
 
 import pytest
@@ -445,8 +446,6 @@ def test_dead_parent_fallback():
 
 def test_coverage_edge_cases():
     """Test edge cases for improved coverage."""
-    import copy
-
     # Test All.__copy__ and All.__deepcopy__ (lines 287, 290)
     all_instance = All()
     shallow = copy.copy(all_instance)
@@ -482,7 +481,7 @@ def test_coverage_edge_cases():
     agent2 = ComputedAgent(model)
     _ = agent2.computed_attr  # trigger computation
     # Access the ComputedState object for this instance (stored as _computed_{func_name})
-    computed_obj = getattr(agent2, "_computed_computed_attr")
+    computed_obj = agent2._computed_computed_attr
     # ComputedState has a 'name' attribute that should match
     assert computed_obj.name == "computed_attr"
 
