@@ -12,7 +12,7 @@ from matplotlib.colors import to_rgb
 import mesa
 from mesa.discrete_space import DiscreteSpace, Grid
 from mesa.space import ContinuousSpace, PropertyLayer, _Grid
-from mesa.visualization.utils import update_counter
+from mesa.visualization.utils import FigureAltair, update_counter
 
 
 def make_space_altair(*args, **kwargs):  # noqa: D103
@@ -85,7 +85,7 @@ def SpaceAltair(
     if post_process is not None:
         chart = post_process(chart)
 
-    solara.FigureAltair(chart)
+    return FigureAltair(chart)
 
 
 def _portrayal_to_dict(portrayal_result, agent):
@@ -250,10 +250,9 @@ def chart_property_layers(space, propertylayer_portrayal, chart_width, chart_hei
 
     Args:
         space: the ContinuousSpace instance
-        propertylayer_portrayal:Dictionary of PropertyLayer portrayal specifications
+        propertylayer_portrayal: Dictionary of PropertyLayer portrayal specifications
         chart_width: width of the agent chart to maintain consistency with the property charts
         chart_height: height of the agent chart to maintain consistency with the property charts
-        agent_chart: the agent chart to layer with the property layers on the grid
     Returns:
         Altair Chart
     """
@@ -550,4 +549,4 @@ def PlotAltair(model, measure, post_process: Callable | None = None, grid=False)
     if post_process is not None:
         chart = post_process(chart)
 
-    return solara.FigureAltair(chart)
+    return FigureAltair(chart)

@@ -86,7 +86,7 @@ class MockModel(Model):
         fixed_model_param=None,
         enable_agent_reporters=True,
         n_agents=3,
-        seed=None,
+        rng=None,
         **kwargs,
     ):
         """Initialize a MockModel.
@@ -97,10 +97,10 @@ class MockModel(Model):
             fixed_model_param: fixed model parameters
             enable_agent_reporters: whether to enable agent reporters
             n_agents: number of agents
-            seed : random seed
+            rng : random seed
             kwargs: keyword arguments
         """
-        super().__init__(seed=seed, **kwargs)
+        super().__init__(rng=rng, **kwargs)
         self.variable_model_param = variable_model_param
         self.variable_agent_param = variable_agent_param
         self.fixed_model_param = fixed_model_param
@@ -144,7 +144,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 1,
             "agent_id": 1,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
         {
             "RunId": 0,
@@ -154,7 +154,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 2,
             "agent_id": 2,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
         {
             "RunId": 0,
@@ -164,7 +164,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 3,
             "agent_id": 3,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
     ]
 
@@ -178,7 +178,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 1,
             "agent_id": 1,
             "agent_local": 250.0,
-            "seed": None,
+            "rng": None,
         },
         {
             "RunId": 0,
@@ -188,7 +188,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 2,
             "agent_id": 2,
             "agent_local": 250.0,
-            "seed": None,
+            "rng": None,
         },
         {
             "RunId": 0,
@@ -198,7 +198,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 3,
             "agent_id": 3,
             "agent_local": 250.0,
-            "seed": None,
+            "rng": None,
         },
     ]
 
@@ -216,7 +216,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 1,
             "agent_id": 1,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
         {
             "RunId": 0,
@@ -226,7 +226,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 2,
             "agent_id": 2,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
         {
             "RunId": 0,
@@ -236,7 +236,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 3,
             "agent_id": 3,
             "agent_local": 250.0,
-            "seed": 42,
+            "rng": 42,
         },
         {
             "RunId": 1,
@@ -246,7 +246,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 1,
             "agent_id": 1,
             "agent_local": 250.0,
-            "seed": 31415,
+            "rng": 31415,
         },
         {
             "RunId": 1,
@@ -256,7 +256,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 2,
             "agent_id": 2,
             "agent_local": 250.0,
-            "seed": 31415,
+            "rng": 31415,
         },
         {
             "RunId": 1,
@@ -266,7 +266,7 @@ def test_batch_run():  # noqa: D103
             "AgentID": 3,
             "agent_id": 3,
             "agent_local": 250.0,
-            "seed": 31415,
+            "rng": 31415,
         },
     ]
 
@@ -297,7 +297,7 @@ def test_batch_run_no_agent_reporters():  # noqa: D103
             "Step": 1000,
             "enable_agent_reporters": False,
             "reported_model_param": 42,
-            "seed": None,
+            "rng": None,
         }
     ]
 
@@ -321,7 +321,7 @@ def test_batch_run_unhashable_param():  # noqa: D103
         "agent_local": 250.0,
         "n_agents": 2,
         "variable_model_param": {"key": "value"},
-        "seed": None,
+        "rng": None,
     }
 
     assert result == [
@@ -360,6 +360,110 @@ def test_iterations_deprecation_warning():
     """Test that using iterations parameter raises DeprecationWarning."""
     with pytest.warns(DeprecationWarning, match="iterations.*deprecated.*rng"):
         mesa.batch_run(MockModel, {}, number_processes=1, iterations=1)
+
+
+def test_batch_run_legacy():
+    """Covers the legacy fallback."""
+
+    class LegacyModel(Model):
+        def __init__(self, *args, **kwargs):
+            self.schedule = None
+            super().__init__()
+            self.datacollector = DataCollector(
+                model_reporters={"Step": lambda m: m.steps},
+                agent_reporters={"Dummy": lambda a: 1},
+            )
+            # FORCE LEGACY: Delete _collection_steps attribute manually
+            delattr(self.datacollector, "_collection_steps")
+
+            # Ensure there is at least one agent
+            MockAgent(self, 1)
+
+        def step(self):
+            super().step()
+            self.datacollector.collect(self)
+
+    # Logic to hit the line:
+    # Max steps = 6 (Indices: 0, 1, 2, 3, 4, 5)
+    # Period = 2
+    # range(0, 6, 2) generates -> [0, 2, 4]
+    # The last model step is 5.
+    # steps[-1] (4) != model.steps-1 (5).
+    # This forces the code to execute: steps.append(5)
+    results = mesa.batch_run(
+        LegacyModel,
+        parameters={},
+        number_processes=1,
+        rng=[None],
+        max_steps=6,
+        data_collection_period=2,
+        display_progress=False,
+    )
+
+    steps_captured = [r["Step"] for r in results]
+
+    # Expect [1, 2, 4, 5] instead of [0, 2, 4, 5]
+    # Why? Step 0 was not collected. Legacy fallback logic defaults to
+    # the first available step (Step 1) when the requested Step (0) is missing.
+    assert steps_captured == [1, 2, 4, 5]
+    # Ensure last step is present
+    assert 5 in steps_captured
+
+
+def test_batch_run_coverage_cases():
+    """Covers all the cases related to data_collection_period.
+
+    - case -1: Only collect at the end of the run.
+    - case 1: Collect every step.
+    - case _: Collect every N steps (default).
+    """
+    # Cover 'case -1:' (End Only)
+    results_case_end = mesa.batch_run(
+        MockModel,
+        parameters={},
+        number_processes=1,
+        rng=[None],
+        max_steps=5,
+        data_collection_period=-1,  # Triggers 'case -1:'
+        display_progress=False,
+    )
+
+    # Use set() to deduplicate agent rows
+    captured_steps_end = sorted({r["Step"] for r in results_case_end})
+
+    assert captured_steps_end == [5]
+
+    # Cover 'case 1:' (Every Step)
+    results_case_1 = mesa.batch_run(
+        MockModel,
+        parameters={},
+        number_processes=1,
+        rng=[None],
+        max_steps=5,
+        data_collection_period=1,  # Triggers 'case 1:'
+        display_progress=False,
+    )
+
+    assert len(results_case_1) > 0
+
+    assert results_case_1[0]["Step"] == 1
+
+    # Cover 'case _:' (Default)
+    results_case_default = mesa.batch_run(
+        MockModel,
+        parameters={},
+        number_processes=1,
+        rng=[None],
+        max_steps=5,
+        data_collection_period=2,  # Triggers 'case _:'
+        display_progress=False,
+    )
+
+    # Use set() to deduplicate because MockModel returns 3 rows per step (one per agent)
+    captured_steps = sorted({r["Step"] for r in results_case_default})
+
+    # Start at 1, step by 2 -> [1, 3, 5]
+    assert captured_steps == [1, 3, 5]
 
 
 class SparseAgent(Agent):
@@ -424,6 +528,12 @@ def test_batch_run_sparse_collection():
     assert all("Value" in row for row in result)
     assert all("Step" in row for row in result)
 
+    # Verify no "ghost" steps were created.
+    # Expected steps: 5, 10, 15, 20 (Total 4 rows).
+    assert len(result) == 4, f"Expected 4 rows for sparse collection, got {len(result)}"
+    steps_captured = sorted([row["Step"] for row in result])
+    assert steps_captured == [5, 10, 15, 20]
+
 
 class TimeDilationModel(Model):
     """Model that collects data multiple times per step to test BatchRunner alignment."""
@@ -457,6 +567,10 @@ def test_batch_run_time_dilation():
         data_collection_period=1,
         display_progress=False,
     )
+
+    # Verify ALL sub-step data is captured
+    # 1 Initial + (2 collections per step * 5 steps) = 11 rows total
+    assert len(results) == 11, f"Data Loss! Expected 11 rows, got {len(results)}"
 
     # We expect to find data for 'Step 5'
     # Without the fix, it grabs index 5 (Step 2/3). With fix, it finds correct Step 5.
@@ -536,8 +650,11 @@ def test_batch_run_missing_step():
         display_progress=False,
     )
 
-    # Should handle sparse collection - may have fewer results
-    assert len(results) >= 0
+    # Init(1) + Steps 2,4,6(3) = 4 total rows
+    # Step 5 should NOT be present.
+    assert len(results) == 4, f"Expected 4 rows, got {len(results)}"
+    steps_found = [r["Step"] for r in results]
+    assert 5 not in steps_found, "Ghost data found for Step 5"
 
 
 def test_batch_run_empty_collection_edge_case():
@@ -572,7 +689,9 @@ def test_batch_run_empty_collection_edge_case():
     )
 
     # Should handle empty collections gracefully
-    assert len(results) >= 0
+    # Only one collection occurred at step 3.
+    assert len(results) == 1, f"Expected 1 row, got {len(results)}"
+    assert results[0]["Step"] == 3
 
 
 def test_batch_run_agenttype_reporters():
@@ -591,8 +710,8 @@ def test_batch_run_agenttype_reporters():
     class AgenttypeModel(Model):
         """Model with agenttype_reporters."""
 
-        def __init__(self, n_agents=5, seed=None):
-            super().__init__(seed=seed)
+        def __init__(self, n_agents=5, rng=None):
+            super().__init__(rng=rng)
             self.n_agents = n_agents
             self.datacollector = DataCollector(
                 model_reporters={"total_agents": lambda m: len(m.agents)},
