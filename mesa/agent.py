@@ -522,15 +522,12 @@ class AgentSet[A: Agent](MutableSet[A], Sequence[A]):
         Returns:
             Agent | list[Agent]: The selected agent or list of agents based on the index or slice provided.
         """
-        # For slices, we need the full list
         if isinstance(item, slice):
             return list(self._agents.keys())[item]
 
-        # For negative indices, we need the full list
         if item < 0:
             return list(self._agents.keys())[item]
 
-        # For positive indices, use islice to avoid creating full list
         try:
             return next(itertools.islice(self._agents.keys(), item, item + 1))
         except StopIteration:
