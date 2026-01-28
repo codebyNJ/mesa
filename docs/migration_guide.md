@@ -5,7 +5,7 @@ Non-breaking changes aren't included, for those see our [Release history](https:
 
 ## Mesa 3.5.0
 
-### AgentSet Sequence Behavior Deprecation
+### AgentSet sequence behavior
 The Sequence behavior (indexing and slicing) on `AgentSet` is deprecated and will be removed in Mesa 4.0. Use the new `to_list()` method instead.
 
 ```python
