@@ -10,6 +10,7 @@ import random
 import sys
 import warnings
 from collections.abc import Sequence
+from contextlib import contextmanager
 
 # mypy
 from typing import TYPE_CHECKING, Any
@@ -181,6 +182,10 @@ class Model[A: Agent, S: Scenario](HasObservables):
             [], random=self.random
         )  # an agenset with all agents
 
+        # Deferred registration state for batch agent creation
+        self._defer_registration: bool = False
+        self._pending_agents: list[A] | None = None
+
     def _wrapped_step(self, *args: Any, **kwargs: Any) -> None:
         """Advance time by one unit, processing any scheduled events."""
         # Schedule step event if not already scheduled (first call or no simulator)
@@ -297,6 +302,11 @@ class Model[A: Agent, S: Scenario](HasObservables):
             is no need to use this if you are subclassing Agent and calling its
             super in the ``__init__`` method.
         """
+        # Check if we're in deferred registration mode (batch creation)
+        if self._defer_registration:
+            self._pending_agents.append(agent)
+            return
+
         # Add to main storage
         self._all_agents.add(agent)
         agent.unique_id = self.agent_id_counter
@@ -331,6 +341,78 @@ class Model[A: Agent, S: Scenario](HasObservables):
         self._all_agents.remove(agent)
 
         _mesa_logger.debug(f"deregistered agent with agent_id {agent.unique_id}")
+
+    @contextmanager
+    def _deferred_registration(self):
+        """Context manager for deferring agent registration during bulk creation.
+
+        When used, agents created within the context are collected in a pending list
+        and batch registered when the context exits. This is more efficient than
+        registering each agent individually.
+
+        Yields:
+            None
+
+        Notes:
+            This is an internal optimization used by Agent.create_agents().
+        """
+        self._pending_agents = []
+        self._defer_registration = True
+        try:
+            yield
+        finally:
+            self._defer_registration = False
+            if self._pending_agents:
+                self._batch_register_agents(self._pending_agents)
+            self._pending_agents = None
+
+    def _batch_register_agents(self, agents: list[A]) -> None:
+        """Batch register multiple agents efficiently.
+
+        This is an optimized internal method for bulk agent registration.
+        Used by Agent.create_agents() for better performance.
+
+        Args:
+            agents: List of agents to register
+        """
+        if not agents:
+            return
+
+        # Pre-allocate unique_ids in bulk
+        start_id = self.agent_id_counter
+        self.agent_id_counter += len(agents)
+
+        # Assign unique_ids
+        for i, agent in enumerate(agents):
+            agent.unique_id = start_id + i
+
+        # Bulk add to _all_agents using dict.update for efficiency
+        self._all_agents._agents.update(dict.fromkeys(agents))
+
+        # Group agents by type for batch insertion
+        by_type: dict[type, list[A]] = {}
+        for agent in agents:
+            agent_type = type(agent)
+            if agent_type not in by_type:
+                by_type[agent_type] = []
+            by_type[agent_type].append(agent)
+
+        # Batch add to _agents_by_type
+        for agent_type, type_agents in by_type.items():
+            if agent_type in self._agents_by_type:
+                self._agents_by_type[agent_type]._agents.update(
+                    dict.fromkeys(type_agents)
+                )
+            else:
+                self._agents_by_type[agent_type] = _HardKeyAgentSet(
+                    type_agents, random=self.random
+                )
+
+        # Log registrations (signals are not emitted in batch mode for performance)
+        for agent in agents:
+            _mesa_logger.debug(
+                f"registered {agent.__class__.__name__} with agent_id {agent.unique_id}"
+            )
 
     def run_model(self) -> None:
         """Run the model until the end condition is reached.

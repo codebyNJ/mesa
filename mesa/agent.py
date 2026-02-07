@@ -95,43 +95,54 @@ class Agent[M: Model]:
         Returns:
             AgentSet containing the agents created.
 
+        Notes:
+            Uses deferred batch registration for improved performance when
+            creating many agents at once.
+
         """
         agents = []
 
-        if not args and not kwargs:
-            for _ in range(n):
-                agents.append(cls(model))
-            return AgentSet(agents, random=model.random)
-
-        # Prepare positional argument iterators
-        arg_iters = []
-        for arg in args:
-            if isinstance(arg, (list, np.ndarray, tuple, pd.Series)) and len(arg) == n:
-                arg_iters.append(arg)
+        # Use deferred registration for batch creation performance
+        with model._deferred_registration():
+            if not args and not kwargs:
+                for _ in range(n):
+                    agents.append(cls(model))
             else:
-                arg_iters.append(itertools.repeat(arg, n))
+                # Prepare positional argument iterators
+                arg_iters = []
+                for arg in args:
+                    if (
+                        isinstance(arg, (list, np.ndarray, tuple, pd.Series))
+                        and len(arg) == n
+                    ):
+                        arg_iters.append(arg)
+                    else:
+                        arg_iters.append(itertools.repeat(arg, n))
 
-        # Prepare keyword argument iterators
-        kw_keys = list(kwargs.keys())
-        kw_val_iters = []
-        for v in kwargs.values():
-            if isinstance(v, (list, np.ndarray, tuple, pd.Series)) and len(v) == n:
-                kw_val_iters.append(v)
-            else:
-                kw_val_iters.append(itertools.repeat(v, n))
+                # Prepare keyword argument iterators
+                kw_keys = list(kwargs.keys())
+                kw_val_iters = []
+                for v in kwargs.values():
+                    if (
+                        isinstance(v, (list, np.ndarray, tuple, pd.Series))
+                        and len(v) == n
+                    ):
+                        kw_val_iters.append(v)
+                    else:
+                        kw_val_iters.append(itertools.repeat(v, n))
 
-        # If arg_iters is empty, zip(*[]) returns nothing, so we use repeat(())
-        pos_iter = zip(*arg_iters) if arg_iters else itertools.repeat(())
+                # If arg_iters is empty, zip(*[]) returns nothing, so we use repeat(())
+                pos_iter = zip(*arg_iters) if arg_iters else itertools.repeat(())
 
-        kw_iter = zip(*kw_val_iters) if kw_val_iters else itertools.repeat(())
+                kw_iter = zip(*kw_val_iters) if kw_val_iters else itertools.repeat(())
 
-        # We rely on range(n) to drive the loop length
-        if kwargs:
-            for _, p_args, k_vals in zip(range(n), pos_iter, kw_iter):
-                agents.append(cls(model, *p_args, **dict(zip(kw_keys, k_vals))))
-        else:
-            for _, p_args in zip(range(n), pos_iter):
-                agents.append(cls(model, *p_args))
+                # We rely on range(n) to drive the loop length
+                if kwargs:
+                    for _, p_args, k_vals in zip(range(n), pos_iter, kw_iter):
+                        agents.append(cls(model, *p_args, **dict(zip(kw_keys, k_vals))))
+                else:
+                    for _, p_args in zip(range(n), pos_iter):
+                        agents.append(cls(model, *p_args))
 
         return AgentSet(agents, random=model.random)
 
