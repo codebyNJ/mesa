@@ -93,6 +93,19 @@ class CellAgent(Agent, HasCell, BasicMovement):
         cell (Cell): The cell the agent is currently in.
     """
 
+    @property
+    def position(self) -> tuple[int, ...] | None:
+        """The position of this agent in its space.
+
+        This property implements the Locatable protocol. For CellAgents,
+        the position is derived from the cell's coordinate.
+
+        Returns:
+            The cell's coordinate tuple, or None if not placed in any cell.
+
+        """
+        return self.cell.coordinate if self.cell is not None else None
+
     def remove(self):
         """Remove the agent from the model."""
         super().remove()
@@ -100,7 +113,27 @@ class CellAgent(Agent, HasCell, BasicMovement):
 
 
 class FixedAgent(Agent, FixedCell):
-    """A patch in a 2D grid."""
+    """An agent permanently fixed to a cell.
+
+    Unlike CellAgent, FixedAgent cannot move after being placed.
+    Attempting to change the cell property raises ValueError.
+
+    Attributes:
+        cell (Cell): The cell to which this agent is permanently fixed.
+    """
+
+    @property
+    def position(self) -> tuple[int, ...] | None:
+        """The position of this agent in its space.
+
+        This property implements the Locatable protocol. For FixedAgents,
+        the position is derived from the cell's coordinate.
+
+        Returns:
+            The cell's coordinate tuple, or None if not yet placed.
+
+        """
+        return self.cell.coordinate if self.cell is not None else None
 
     def remove(self):
         """Remove the agent from the model."""

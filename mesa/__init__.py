@@ -12,11 +12,15 @@ from mesa.agent import Agent
 from mesa.batchrunner import batch_run
 from mesa.datacollection import DataCollector
 from mesa.model import Model
+from mesa.protocols import HasPosition, Locatable, PositionLike
 
 __all__ = [
     "Agent",
     "DataCollector",
+    "HasPosition",
+    "Locatable",
     "Model",
+    "PositionLike",
     "batch_run",
     "discrete_space",
     "experimental",
