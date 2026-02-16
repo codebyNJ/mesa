@@ -7,6 +7,7 @@ Core Objects: Model
 from __future__ import annotations
 
 import random
+import warnings
 from collections.abc import Callable, Sequence
 
 # mypy
@@ -171,7 +172,17 @@ class Model[A: Agent, S: Scenario](HasObservables):
         self.data_registry = DataRegistry()
 
     def _wrapped_step(self) -> None:
-        """Advance time by one unit, processing any scheduled events."""
+        """Advance time by one unit, processing any scheduled events.
+
+        .. deprecated::
+            Use :meth:`run_for` instead, e.g. ``model.run_for(1)``.
+        """
+        warnings.warn(
+            "model.step() is deprecated. Use model.run_for(1) instead. "
+            "See https://mesa.readthedocs.io/latest/migration_guide.html for details.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self._advance_time(self.time + 1)
 
     def _advance_time(self, until: float) -> None:
@@ -315,10 +326,17 @@ class Model[A: Agent, S: Scenario](HasObservables):
     def run_model(self) -> None:
         """Run the model until the end condition is reached.
 
-        Overload as needed.
+        .. deprecated::
+            Use :meth:`run_for` or :meth:`run_until` instead.
         """
+        warnings.warn(
+            "model.run_model() is deprecated. Use model.run_for() or model.run_until() instead. "
+            "See https://mesa.readthedocs.io/latest/migration_guide.html for details.",
+            FutureWarning,
+            stacklevel=2,
+        )
         while self.running:
-            self.step()
+            self._advance_time(self.time + 1)
 
     def step(self) -> None:
         """A single step. Fill in here."""

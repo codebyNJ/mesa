@@ -1,5 +1,7 @@
 """Tests for model.py."""
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -15,7 +17,7 @@ def test_model_set_up():
     assert model.steps == 0
     assert model.time == 0.0
 
-    model.step()
+    model.run_for(1)
     assert model.steps == 1
     assert model.time == 1.0
 
@@ -25,7 +27,7 @@ def test_model_time_increment():
     model = Model()
 
     for i in range(5):
-        model.step()
+        model.run_for(1)
         assert model.steps == i + 1
         assert model.time == float(i + 1)
 
@@ -56,9 +58,31 @@ def test_running():
                 self.running = False
 
     model = TestModel()
-    model.run_model()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        model.run_model()
     assert model.steps == 10
     assert model.time == 10.0
+
+
+def test_step_deprecation_warning():
+    """Test that model.step() emits a FutureWarning."""
+    model = Model()
+    with pytest.warns(FutureWarning, match="model.step\\(\\) is deprecated"):
+        model.step()
+
+
+def test_run_model_deprecation_warning():
+    """Test that model.run_model() emits a FutureWarning."""
+
+    class TestModel(Model):
+        def step(self):
+            """Stop immediately."""
+            self.running = False
+
+    model = TestModel()
+    with pytest.warns(FutureWarning, match="model.run_model\\(\\) is deprecated"):
+        model.run_model()
 
 
 def test_rng(rng=23):

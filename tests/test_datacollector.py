@@ -3,6 +3,10 @@
 import unittest
 from functools import partial
 
+import pytest
+
+pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
+
 import pandas as pd
 
 from mesa import Agent, Model
