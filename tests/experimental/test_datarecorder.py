@@ -6,10 +6,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-import pytest
-
-pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -26,6 +22,8 @@ from mesa.experimental.data_collection import (
 )
 from mesa.experimental.data_collection.datarecorders import NumpyJSONEncoder
 from mesa.model import Model
+
+pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
 
 
 class MockAgent(Agent):

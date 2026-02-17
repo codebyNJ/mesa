@@ -3,14 +3,13 @@
 import unittest
 from functools import partial
 
-import pytest
-
-pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
-
 import pandas as pd
+import pytest
 
 from mesa import Agent, Model
 from mesa.datacollection import DataCollector
+
+pytestmark = pytest.mark.filterwarnings("ignore::FutureWarning")
 
 
 class MockAgent(Agent):
