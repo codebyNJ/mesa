@@ -6,17 +6,16 @@ import pytest
 from mesa.agent import Agent, AgentSet
 from mesa.experimental.devs.simulator import DEVSimulator
 from mesa.model import Model
+from mesa.time import Schedule
 
 
 def test_model_set_up():
     """Test Model initialization."""
     model = Model()
     assert model.running is True
-    assert model.steps == 0
     assert model.time == 0.0
 
     model.step()
-    assert model.steps == 1
     assert model.time == 1.0
 
 
@@ -26,7 +25,6 @@ def test_model_time_increment():
 
     for i in range(5):
         model.step()
-        assert model.steps == i + 1
         assert model.time == float(i + 1)
 
 
@@ -52,12 +50,11 @@ def test_running():
     class TestModel(Model):
         def step(self):
             """Stop at step 10."""
-            if self.steps == 10:
+            if self.time == 10:
                 self.running = False
 
     model = TestModel()
     model.run_model()
-    assert model.steps == 10
     assert model.time == 10.0
 
 
@@ -147,3 +144,25 @@ def test_agent_remove():
 
     model.remove_all_agents()
     assert len(model.agents) == 0
+
+
+def test_schedule_event_rejects_past_time():
+    """Model.schedule_event should not allow scheduling in the past."""
+    model = Model()
+    model.run_until(10)
+
+    # Scheduling in the past should fail
+    with pytest.raises(ValueError):
+        model.schedule_event(lambda: None, at=5)
+
+
+def test_schedule_recurring_cannot_start_in_past():
+    """Model.schedule_recurring should not allow scheduling in the past."""
+    model = Model()
+
+    model.run_until(10)
+
+    schedule = Schedule(interval=1.0, start=3.0)
+
+    with pytest.raises(ValueError):
+        model.schedule_recurring(lambda: None, schedule)

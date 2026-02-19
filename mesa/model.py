@@ -7,9 +7,8 @@ Core Objects: Model
 from __future__ import annotations
 
 import random
+import warnings
 from collections.abc import Callable, Sequence
-
-# mypy
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -117,7 +116,7 @@ class Model[A: Agent, S: Scenario](HasObservables):
         """
         super().__init__(*args, **kwargs)
         self.running: bool = True
-        self.steps: int = 0
+        self.time: float = 0.0
         self.time: float = 0.0
         self.agent_id_counter: int = 1
         self.rng = None
@@ -154,7 +153,7 @@ class Model[A: Agent, S: Scenario](HasObservables):
         self._user_step = self.step
         self._default_schedule: EventGenerator = EventGenerator(
             self,
-            self._do_step,
+            self._user_step,
             Schedule(interval=1.0, start=1.0),
             priority=Priority.HIGH,
         ).start()
@@ -181,6 +180,14 @@ class Model[A: Agent, S: Scenario](HasObservables):
             until: The time to advance to
 
         """
+        if until <= self.time:
+            warnings.warn(
+                f"end time {until} is larger than time {self.time}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+            return
         while True:
             try:
                 event = self._event_list.pop_event()
@@ -195,12 +202,6 @@ class Model[A: Agent, S: Scenario](HasObservables):
                 break
 
         self.time = until
-
-    def _do_step(self) -> None:
-        """Execute one step. Rescheduling is handled by the EventGenerator."""
-        self.steps += 1
-        _mesa_logger.info(f"Step {self.steps} at time {self.time}")
-        self._user_step()
 
     @property
     def agents(self) -> _HardKeyAgentSet[A]:
@@ -393,11 +394,18 @@ class Model[A: Agent, S: Scenario](HasObservables):
 
         Raises:
             ValueError: If both or neither of at/after are specified
+            ValueError: If both or neither of at/after are specified, or if the scheduled time is in the past.
         """
         if (at is None) == (after is None):
             raise ValueError("Specify exactly one of 'at' or 'after'")
 
         time = at if at is not None else self.time + after
+        # Enforce monotonic time progression
+        if time < self.time:
+            raise ValueError(
+                f"Cannot schedule event in the past. "
+                f"Scheduled time is {time}, but current time is {self.time}"
+            )
         event = Event(time, function, priority=priority)
         self._event_list.add_event(event)
         return event
@@ -417,7 +425,15 @@ class Model[A: Agent, S: Scenario](HasObservables):
 
         Returns:
             The EventGenerator (can be used to stop)
+
+        Raises:
+            ValueError: If the schedule start time is in the past.
         """
+        if schedule.start is not None and schedule.start < self.time:
+            raise ValueError(
+                f"Cannot start recurring schedule in the past. "
+                f"Start time is {schedule.start}, current time is {self.time}"
+            )
         generator = EventGenerator(self, function, schedule, priority)
         generator.start()
         return generator
@@ -435,5 +451,16 @@ class Model[A: Agent, S: Scenario](HasObservables):
 
         Args:
             end_time: Absolute time to run until
+
+        If model.time is larger than end_time, the method returns directly.
+
         """
+        if self.time > end_time:
+            warnings.warn(
+                f"end_time {end_time} is larger than time {self.time}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            return
+
         self._advance_time(end_time)
