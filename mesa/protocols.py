@@ -105,8 +105,8 @@ class HasPosition:
             class SpaceAwarePosition(HasPosition):
                 @HasPosition.position.setter
                 def position(self, value):
-                    old = self._mesa_position
-                    self._mesa_position = value
+                    old = self._position
+                    self._position = value
                     if hasattr(self, 'space'):
                         self.space._on_position_changed(self, old, value)
 
@@ -122,12 +122,12 @@ class HasPosition:
 
     """
 
-    _mesa_position: PositionLike | None = None
+    _position: PositionLike | None = None
 
     @property
     def position(self) -> PositionLike | None:
         """The position of this object in its space."""
-        return self._mesa_position
+        return self._position
 
     @position.setter
     def position(self, value: PositionLike | None) -> None:
@@ -135,4 +135,4 @@ class HasPosition:
             raise TypeError(
                 f"position must be a tuple or numpy array, got {type(value).__name__}"
             )
-        self._mesa_position = value
+        self._position = value
