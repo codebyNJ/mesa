@@ -38,6 +38,7 @@ from copy import deepcopy
 from functools import partial
 
 from mesa import Agent
+from mesa.exceptions import TableMissingException
 
 with contextlib.suppress(ImportError):
     import pandas as pd
@@ -407,7 +408,7 @@ class DataCollector:
                             if False, throw an error if any columns are missing
         """
         if table_name not in self.tables:
-            raise ValueError(f"Table '{table_name}' does not exist.")
+            raise TableMissingException(table_name)
 
         for column in self.tables[table_name]:
             if column in row:
@@ -498,5 +499,5 @@ class DataCollector:
             table_name: The name of the table to convert.
         """
         if table_name not in self.tables:
-            raise ValueError(f"Table '{table_name}' does not exist.")
+            raise TableMissingException(table_name)
         return pd.DataFrame(self.tables[table_name])

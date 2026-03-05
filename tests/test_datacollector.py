@@ -9,6 +9,7 @@ import pytest
 
 from mesa import Agent, Model
 from mesa.datacollection import DataCollector
+from mesa.exceptions import TableMissingException
 
 
 class MockAgent(Agent):
@@ -763,10 +764,10 @@ def test_get_agent_vars_dataframe_no_reporters():
 
 
 def test_add_table_row_nonexistent_table():
-    """Test that add_table_row raises ValueError for nonexistent table."""
+    """Test that add_table_row raises TableMissingException for nonexistent table."""
     dc = DataCollector()
 
-    with pytest.raises(ValueError, match="does not exist"):
+    with pytest.raises(TableMissingException, match="does not exist"):
         dc.add_table_row("nonexistent", {"col": "val"})
 
 
@@ -779,10 +780,10 @@ def test_add_table_row_missing_column():
 
 
 def test_get_table_dataframe_nonexistent():
-    """Test that get_table_dataframe raises ValueError for nonexistent table."""
+    """Test that get_table_dataframe raises TableMissingException for nonexistent table."""
     dc = DataCollector()
 
-    with pytest.raises(ValueError, match="does not exist"):
+    with pytest.raises(TableMissingException, match="does not exist"):
         dc.get_table_dataframe("nonexistent")
 
 
